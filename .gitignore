@@ -19,3 +19,7 @@
 compiled/
 
 build.bash
+run_tests.bash
+
+# Any runners from tests
+*runner*
