@@ -60,7 +60,7 @@ private:
 		mHighestPrice = mOrders.empty() ? 0.0 : std::max_element(mOrders.begin(), mOrders.end(), CompareOrders)->second.mPrice;
 	}
 
-	void UpdateRunningPriceTotalAndTime(int timeStamp)
+	void UpdateBeforeProcessingInstruction(int timeStamp)
 	{
 		if (!mOrders.empty())	// If there were existing orders in the period, add to the total.
 		{
@@ -90,7 +90,7 @@ public:
 		int timeStamp; 	char type; 	unsigned id;	double price;
 		s >> timeStamp;	s >> type;	s >> id;
 
-		UpdateRunningPriceTotalAndTime(timeStamp);
+		UpdateBeforeProcessingInstruction(timeStamp);
 
 		if (type == 'I')
 		{
