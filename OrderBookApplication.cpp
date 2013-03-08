@@ -114,6 +114,12 @@ std::stringstream& operator>>(std::stringstream& stream, OrderBook& book)
 
 int main (int argc, char* argv[])
 {
+	if (argc != 2)
+	{
+		std::cout << "Usage: application_name data_file \n";
+		return 0;
+	}
+
 	std::ifstream data_file(argv[1]);
 	std::stringstream ss;
 	ss << data_file.rdbuf();
@@ -125,4 +131,6 @@ int main (int argc, char* argv[])
 		ss >> order_book;
 	}
 	std::cout << "Time weighted average price is " << order_book.GetTimeWeightedAveragePrice() << "\n";
+
+	return 0;
 }
