@@ -13,7 +13,7 @@ struct Order
 
 	Order() : mStartTime(0u), mPrice(0.0) {}
 
-	Order(int time, double price) : mStartTime(time), mPrice(price) {}
+	Order(double price, int time) : mStartTime(time), mPrice(price) {}
 };
 
 bool CompareOrders(const std::pair<unsigned, Order>& order_left, const std::pair<unsigned, Order>& order_right)
@@ -21,23 +21,23 @@ bool CompareOrders(const std::pair<unsigned, Order>& order_left, const std::pair
 	return order_left.second.mPrice < order_right.second.mPrice;
 }
 
-class OrderBook
+class OrderBook	/* A class that reads and stores orders and their time data. */
 {
 private:
 
-	std::map<unsigned, Order> mOrders;	// A map from unique ID to Order.
+	std::map<unsigned, Order> mOrders;
 
-	int mTotalTimeExposed;
+	double mHighestPrice;
 
 	int mCurrentTimeStamp;
 
-	double mRunningPriceTotal;
+	double mRunningHighPriceTotal;
 
-	double mHighestCurrentPrice;
+	int mTotalTimeHighPriceValid;
 
-	void InsertOrder(unsigned id, Order& order)
+	void InsertOrder(Order& order, unsigned id)
 	{
-		mHighestCurrentPrice = (order.mPrice > mHighestCurrentPrice) ? order.mPrice : mHighestCurrentPrice;
+		mHighestPrice = (order.mPrice > mHighestPrice) ? order.mPrice : mHighestPrice;
 
 		mOrders[id] = order;
 	}
@@ -49,7 +49,7 @@ private:
 
 		mOrders.erase(position);
 
-		if (!(removed_price < mHighestCurrentPrice))
+		if (!(removed_price < mHighestPrice))	// We try to avoid using CalculateHighestCurrentPrice whenever possible for efficiency.
 		{
 			CalculateHighestCurrentPrice();
 		}
@@ -57,50 +57,50 @@ private:
 
 	void CalculateHighestCurrentPrice() // This method is quite expensive, O(mOrders.size^2)
 	{
-		mHighestCurrentPrice = mOrders.empty() ? 0.0 : std::max_element(mOrders.begin(), mOrders.end(), CompareOrders)->second.mPrice;
+		mHighestPrice = mOrders.empty() ? 0.0 : std::max_element(mOrders.begin(), mOrders.end(), CompareOrders)->second.mPrice;
 	}
 
-	void UpdateRunningPriceTotalAndTime(int newTimeStamp)
+	void UpdateRunningPriceTotalAndTime(int timeStamp)
 	{
 		if (!mOrders.empty())	// If there were existing orders in the period, add to the total.
 		{
-			mRunningPriceTotal += (newTimeStamp - mCurrentTimeStamp)*GetHighestPrice();
-			mTotalTimeExposed += newTimeStamp - mCurrentTimeStamp;
+			mRunningHighPriceTotal += (timeStamp - mCurrentTimeStamp)*GetHighestPrice();
+			mTotalTimeHighPriceValid += timeStamp - mCurrentTimeStamp;
 		}
 
-		mCurrentTimeStamp = newTimeStamp;
+		mCurrentTimeStamp = timeStamp;
 	}
 
 public:
 
-	OrderBook() : mTotalTimeExposed(0), mRunningPriceTotal(0.0), mHighestCurrentPrice(-DBL_MAX) {}
+	OrderBook() :  mHighestPrice(-DBL_MAX), mCurrentTimeStamp(0), mTotalTimeHighPriceValid(0), mRunningHighPriceTotal(0.0) {}
 
 	double GetTimeWeightedAveragePrice()
 	{
-		return mRunningPriceTotal / (double)(mTotalTimeExposed);
+		return mRunningHighPriceTotal / (double)(mTotalTimeHighPriceValid);
 	}
 
 	double GetHighestPrice()
 	{
-		return mOrders.empty() 	?	std::numeric_limits<double>::quiet_NaN() : mHighestCurrentPrice;
+		return mOrders.empty() 	?	std::numeric_limits<double>::quiet_NaN() : mHighestPrice;
 	}
 
 	std::stringstream& operator>>(std::stringstream& s)
 	{
-		int newTimeStamp; 	char type; 	unsigned id;	double price;
-		s >> newTimeStamp;	s >> type;	s >> id;
+		int timeStamp; 	char type; 	unsigned id;	double price;
+		s >> timeStamp;	s >> type;	s >> id;
 
-		UpdateRunningPriceTotalAndTime(newTimeStamp);
+		UpdateRunningPriceTotalAndTime(timeStamp);
 
 		if (type == 'I')
 		{
 			s >> price;
-			Order new_order(newTimeStamp, price);
-			InsertOrder(id, new_order);
+			Order new_order(price, timeStamp);
+			InsertOrder(new_order, id);
 		}
 		else
 		{
-			EraseOrder(id, newTimeStamp);
+			EraseOrder(id, timeStamp);
 		}
 		return s;
 	}
